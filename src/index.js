@@ -1,20 +1,47 @@
-'use strict';
+"use strict";
+// const boostrap = require("./bootstrap");
 
 module.exports = {
-  /**
-   * An asynchronous register function that runs before
-   * your application is initialized.
-   *
-   * This gives you an opportunity to extend code.
-   */
-  register(/*{ strapi }*/) {},
+  // async bootstrap() {
+  //   await boostrap();
+  // },
 
-  /**
-   * An asynchronous bootstrap function that runs before
-   * your application gets started.
-   *
-   * This gives you an opportunity to set up your data model,
-   * run jobs, or perform some special logic.
-   */
-  bootstrap(/*{ strapi }*/) {},
+  register({ strapi }) {
+  
+    const extensionService = strapi.service("plugin::graphql.extension");
+    extensionService.use(({ strapi }) => ({
+      typeDefs: `
+        type Query {
+          profile(email: String!): ProfileEntityResponse
+        }
+      `,
+      resolvers: {
+        Query: {
+          profile: {
+            resolve: async (parent, args, context) => {
+              const { toEntityResponse } = strapi.service(
+                "plugin::graphql.format"
+              ).returnTypes;
+
+             await  strapi.plugin('email').service('email').send({
+                to: 'hammadyounas813@gmail.com',
+                from: 'hammadyounas813@gmail.com',
+                subject: 'Hello world',
+                text: 'Hello world',
+              });
+              const data = await strapi.services["api::profile.profile"].find({
+                filters: { email: args.email },
+              });
+
+              const response = toEntityResponse(data.results[0]);
+
+              console.log("##################", "##################");
+
+              return response;
+            }
+          }
+        }
+      },
+    }));
+  },
 };
